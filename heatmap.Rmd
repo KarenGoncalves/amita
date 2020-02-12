@@ -1,0 +1,34 @@
+---
+title: "PCA of Amita's mass spectrometry results"
+params:
+  author: "Karen Cristine Goncalves dos Santos"
+  date: !r Sys.Date()
+output:
+  html_document:
+    df_print: paged
+---
+
+<center> **Author:** Karen Cristine Goncalves dos Santos
+
+**date:** `r Sys.Date()` </center>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE}
+library(readxl)
+
+amita_final_all <- read_excel(
+  "LF97_GermainH_20191015_Final results.xlsx", 
+  sheet = "Final results all")
+grep("Abundance Ratio", colnames(amita_final_all))
+
+```
+
+```{r}
+for_heatmap <- amita_final_all[, c(1, grep("Abundance Ratio", colnames(amita_final_all)), grep("stat", amita_final_all))]
+cbind(gsub("(\\(\\w+ *\\)) / (\\(\\w+ *\\))", "\\2 / \\1", colnames(for_heatmap), fixed = F), colnames(for_heatmap))
+
+```
+

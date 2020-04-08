@@ -1,0 +1,85 @@
+---
+title: "Graphs for Amita's paper"
+author: "Karen Cristine Goncalves dos Santos"
+date: "4/8/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      root.dir = "E:/amita")
+```
+
+```{r loading limma and data, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(limma)
+library(edgeR)
+library(magrittr)
+library(tidyverse)
+
+normalized_abundances <- read.delim("normalized_abundances.txt", header = T, stringsAsFactors = F)
+normalized_abundances$gene_name <- gsub(".*GN=(\\w+).*", "\\1", normalized_abundances$Description)
+
+design_table <- data.frame(Sample = c(rep("Control", 3), rep("IFN", 3), rep("Virus", 3), rep("IFN_Virus", 3)),
+                           Replicates = colnames(normalized_abundances)[3:14])
+
+design_table$Sample <- relevel(design_table$Sample, "Control") 
+design <- model.matrix(~ 0+design_table$Sample)
+colnames(design) <- unique(as.character(design_table$Sample))
+
+contrast.matrix <- makeContrasts(IFN-Control, Virus-Control, IFN_Virus-Control, IFN_Virus-Virus, IFN_Virus-IFN, levels=design)
+
+proteins_count <- data.frame(normalized_abundances[,3:14] %>% log2(), row.names = normalized_abundances$Accession)
+```
+
+```{r Calculate scores, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+zscore_ <- list()
+mean_ <- apply(proteins_count, 1, mean)
+stdev <- apply(proteins_count, 1, sd)
+
+for (i in levels(design_table$Sample)) {
+  zscore_[[i]] <- (apply(proteins_count[, design_table$Replicates[design_table$Sample == i]],
+                        1, mean) - mean_) / stdev
+}
+
+zscore_ratio <- data.frame(IFN.Control = zscore_$IFN/zscore_$Control, 
+                           Virus.Control = zscore_$Virus/zscore_$Control, 
+                           IFN_Virus.Control = zscore_$IFN_Virus/zscore_$Control, 
+                           IFN_Virus.Virus = zscore_$IFN_Virus/zscore_$Virus,  
+                           IFN_Virus.IFN = zscore_$IFN_Virus/zscore_$IFN)
+
+fit <- lmFit(proteins_count, design)
+fit <- contrasts.fit(fit, contrast.matrix)
+fit <- eBayes(fit)
+results <- combined_results <- filtered_results <- list()
+Down_regulated <- Up_regulated <- Total <- c()
+
+for (i in contrast.matrix[1,] %>% names()) {
+  a <- gsub(" - ", "\\.", i)
+  results[[i]] <- topTable(fit, number = 4848, adjust.method = "BH", coef = i)
+  combined_results[[i]] <- data.frame(Zscore_ratio = zscore_ratio[, a], 
+                                      qValue = results[[i]][rownames(zscore_ratio), "adj.P.Val"])
+  filtered_results[[i]] <- filter(combined_results[[i]], abs(Zscore_ratio) > 1.96 & qValue < 0.05)
+  Down_regulated <- c(Down_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio < 0), 1]))
+  Up_regulated <- c(Up_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio > 0), 1]))
+  Total <-  c(Total, nrow(filtered_results[[i]]))
+  a <- length(Down_regulated)
+  names(Up_regulated)[a] <- names(Down_regulated)[a] <- names(Total)[a] <- i
+}
+  
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+summary_table <- data.frame(Comparison = combined_results %>% names(),
+                            Total = Total,
+                            Down_regulated = Down_regulated,
+                            Up_regulated = Up_regulated)
+plot_summary <- reshape2::melt(summary_table, id = "Comparison")
+
+ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) +
+  geom_col(position = "dodge") + geom_text(aes( label = value, y = value + 10), position = position_dodge(0.9), color = "black") + 
+  scale_color_manual(name = "", values = c("grey", "blue", "red"))+
+  scale_fill_manual(name = "", values = c("grey", "blue", "red")) + 
+  labs(y = "Number of variant proteins", x = "Comparison") + 
+  theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
+
+```
+

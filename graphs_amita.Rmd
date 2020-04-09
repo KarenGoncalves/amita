@@ -2,6 +2,7 @@
 title: "Graphs for Amita's paper"
 author: "Karen Cristine Goncalves dos Santos"
 date: "4/8/2020"
+fontsize: 14pt
 output: pdf_document
 ---
 
@@ -26,9 +27,11 @@ design_table$Sample <- relevel(design_table$Sample, "Control")
 design <- model.matrix(~ 0+design_table$Sample)
 colnames(design) <- unique(as.character(design_table$Sample))
 
-contrast.matrix <- makeContrasts(IFN-Control, Virus-Control, IFN_Virus-Control, IFN_Virus-Virus, IFN_Virus-IFN, levels=design)
+contrast.matrix <- makeContrasts(IFN - Control, Virus - Control, 
+                                 IFN_Virus - Control, IFN_Virus - Virus, 
+                                 IFN_Virus - IFN, levels = design)
 
-proteins_count <- data.frame(normalized_abundances[,3:14] %>% log2(), row.names = normalized_abundances$Accession)
+proteins_count <- data.frame(normalized_abundances[,3:14], row.names = normalized_abundances$Accession)
 ```
 
 ```{r Calculate scores, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -41,11 +44,11 @@ for (i in levels(design_table$Sample)) {
                         1, mean) - mean_) / stdev
 }
 
-zscore_ratio <- data.frame(IFN.Control = zscore_$IFN/zscore_$Control, 
-                           Virus.Control = zscore_$Virus/zscore_$Control, 
-                           IFN_Virus.Control = zscore_$IFN_Virus/zscore_$Control, 
-                           IFN_Virus.Virus = zscore_$IFN_Virus/zscore_$Virus,  
-                           IFN_Virus.IFN = zscore_$IFN_Virus/zscore_$IFN)
+zscore_ratio <- data.frame(IFN.Control = zscore_$IFN/zscore_$Control %>% log2(), 
+                           Virus.Control = zscore_$Virus/zscore_$Control %>% log2(), 
+                           IFN_Virus.Control = zscore_$IFN_Virus/zscore_$Control %>% log2(), 
+                           IFN_Virus.Virus = zscore_$IFN_Virus/zscore_$Virus %>% log2(),  
+                           IFN_Virus.IFN = zscore_$IFN_Virus/zscore_$IFN %>% log2())
 
 fit <- lmFit(proteins_count, design)
 fit <- contrasts.fit(fit, contrast.matrix)
@@ -67,6 +70,15 @@ for (i in contrast.matrix[1,] %>% names()) {
 }
   
 ```
+
+For this graph, I calculated the zscore ratios. The zscore I calculated with the formula:
+
+$$zscore = (X - MEAN) / STDEV$$
+
+Where X is the average abundance of each protein in a sample, MEAN and STDEV are the average and the standard deviation, respectively, of the abundance of each protein accross the experiment. 
+
+I calculated the ratios and did the $log_2$ transformation, then I did the filtering that the people from U Laval did (|zscore ratio| > 1.96 & qValue < 0.05).
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 summary_table <- data.frame(Comparison = combined_results %>% names(),
                             Total = Total,
@@ -75,11 +87,56 @@ summary_table <- data.frame(Comparison = combined_results %>% names(),
 plot_summary <- reshape2::melt(summary_table, id = "Comparison")
 
 ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) +
-  geom_col(position = "dodge") + geom_text(aes( label = value, y = value + 10), position = position_dodge(0.9), color = "black") + 
-  scale_color_manual(name = "", values = c("grey", "blue", "red"))+
+  geom_col(position = "dodge") + 
+  geom_text(aes( label = value, y = value +30), position = position_dodge(0.9), color = "black") + 
+  scale_color_manual(name = "", values = c("grey", "blue", "red"))  +
+  scale_fill_manual(name = "", values = c("grey", "blue", "red")) + 
+  labs(y = "Number of variant proteins", x = "Comparison") + 
+  theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
+
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+zscore_ratios_log2 <- read.delim("zscore_ratios_log2.txt", header = T, stringsAsFactors = F)
+zscores_correct_ratio_log2 <- 1 / (2 ^ zscore_ratios_log2[, 3:8]) %>% log2
+rownames(zscores_correct_ratio_log2) <- zscore_ratios_log2$Accession
+colnames(zscores_correct_ratio_log2) <- c("IFN.Control", "Virus.Control", 
+                                          "IFN_Virus.Control", "Virus.IFN",
+                                          "IFN_Virus.IFN", "IFN_Virus.Virus")
+
+combined_results <- filtered_results <- list()
+
+Down_regulated <- Up_regulated <- Total <- c()
+
+for (i in contrast.matrix[1,] %>% names()) {
+  a <- gsub(" - ", "\\.", i)
+  combined_results[[i]] <- data.frame(Zscore_ratio = zscores_correct_ratio_log2[, a], 
+                                      qValue = results[[i]][rownames(zscores_correct_ratio_log2), "adj.P.Val"])
+  filtered_results[[i]] <- filter(combined_results[[i]], abs(Zscore_ratio) > 1.96 & qValue < 0.05)
+  Down_regulated <- c(Down_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio < 0), 1]))
+  Up_regulated <- c(Up_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio > 0), 1]))
+  Total <-  c(Total, nrow(filtered_results[[i]]))
+  a <- length(Down_regulated)
+  names(Up_regulated)[a] <- names(Down_regulated)[a] <- names(Total)[a] <- i
+}
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+summary_table <- data.frame(Comparison = combined_results %>% names(),
+                            Total = Total,
+                            Down_regulated = Down_regulated,
+                            Up_regulated = Up_regulated)
+plot_summary <- reshape2::melt(summary_table, id = "Comparison")
+
+ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) +
+  geom_col(position = "dodge") + 
+  geom_text(aes( label = value, y = value + 20), position = position_dodge(0.9), color = "black") + 
+  scale_color_manual(name = "", values = c("grey", "blue", "red"))  +
   scale_fill_manual(name = "", values = c("grey", "blue", "red")) + 
   labs(y = "Number of variant proteins", x = "Comparison") + 
   theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
 
 ```
 
+Here I took the $log_2$ transformed zscore ratios from the excel sheet, de-transformed the values ($2^X$, being X each abundance ratio) and got the inverse (1/de-transformed values). Then I did the filtering that the people from U Laval did (|$log_2$(zscore ratio)| > 1.96 & qValue < 0.05).

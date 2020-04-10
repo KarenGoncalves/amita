@@ -1,25 +1,31 @@
 ---
-title: "Graphs for Amita's paper"
+title: "Graphs for Amita's paper - trials inverting the zscore and recalculating qValue"
 author: "Karen Cristine Goncalves dos Santos"
 date: "4/8/2020"
-fontsize: 14pt
+fontsize: 12pt
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, 
                       root.dir = "E:/amita")
-```
-
-```{r loading limma and data, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 library(limma)
 library(edgeR)
 library(magrittr)
 library(tidyverse)
 
+```
+
+# Using same qValue and just transforming the zscore ratio
+
+I tried transforming the zscore ratio with this formula: $$log_2( {1 / (2 ^ {OZR})} )$$
+
+where _OZR_ is the orignal $log_2$ zscore ratio. There problem is that I got no proteins deregulated for 3 of the 4 comparisons. So for the following graph, I transformed the _OZR_ like this: $$-1 * OZR$$
+```{r Load data, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 normalized_abundances <- read.delim("normalized_abundances.txt", header = T, stringsAsFactors = F)
 normalized_abundances$gene_name <- gsub(".*GN=(\\w+).*", "\\1", normalized_abundances$Description)
 
+proteins_count <- data.frame(normalized_abundances[,3:14] %>% log2(), row.names = normalized_abundances$Accession)
 design_table <- data.frame(Sample = c(rep("Control", 3), rep("IFN", 3), rep("Virus", 3), rep("IFN_Virus", 3)),
                            Replicates = colnames(normalized_abundances)[3:14])
 
@@ -31,8 +37,72 @@ contrast.matrix <- makeContrasts(IFN - Control, Virus - Control,
                                  IFN_Virus - Control, IFN_Virus - Virus, 
                                  IFN_Virus - IFN, levels = design)
 
-proteins_count <- data.frame(normalized_abundances[,3:14], row.names = normalized_abundances$Accession)
 ```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+org.adj.pVal <- read.delim("adjpval.txt", header = T, stringsAsFactors = F,  row.names = 1)
+for (i in names(org.adj.pVal)) {
+  org.adj.pVal[, i] <- ifelse(is.na(org.adj.pVal[, i]), 1, org.adj.pVal[, i])
+}
+
+zscore_ratios_log2 <- read.delim("zscore_ratios_log2.txt", header = T, stringsAsFactors = F)
+zscores_correct_ratio_log2 <- -1 * zscore_ratios_log2[, 3:8]
+rownames(zscores_correct_ratio_log2) <- zscore_ratios_log2$Accession
+colnames(zscores_correct_ratio_log2) <- c("IFN.Control", "Virus.Control", 
+                                          "IFN_Virus.Control", "Virus.IFN",
+                                          "IFN_Virus.IFN", "IFN_Virus.Virus")
+
+
+Total <- Down_regulated <- Up_regulated <- c()
+org.combine <- org.filtered_results <- list()
+
+for (i in contrast.matrix[1,] %>% names()) {
+  a <- gsub(" - ", "\\.", i)
+  org.combine[[i]] <- data.frame(Zscore_ratio = zscores_correct_ratio_log2[, a], 
+                                 qValue = org.adj.pVal[rownames(zscores_correct_ratio_log2), a], 
+                                 row.names = rownames(zscores_correct_ratio_log2))
+  
+  org.filtered_results[[i]] <- org.combine[[i]][abs(org.combine[[i]]$Zscore_ratio) > 1.96 &
+                                                  org.combine[[i]]$qValue < 0.05, ]
+  
+  Down_regulated <- c(Down_regulated, length(org.filtered_results[[i]][which(org.filtered_results[[i]]$Zscore_ratio < 0), 1]))
+  Up_regulated <- c(Up_regulated, length(org.filtered_results[[i]][which(org.filtered_results[[i]]$Zscore_ratio > 0), 1]))
+  Total <-  c(Total, nrow(org.filtered_results[[i]]))
+  
+}
+
+names(Up_regulated) <- names(Down_regulated) <- names(Total) <- contrast.matrix[1,] %>% names()
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+summary_table <- data.frame(Comparison = org.combine %>% names(),
+                            Total = Total,
+                            Down_regulated = Down_regulated,
+                            Up_regulated = Up_regulated)
+plot_summary <- reshape2::melt(summary_table, id = "Comparison")
+
+ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) +
+  geom_col(position = "dodge") + 
+  geom_text(aes( label = value, y = value + 20), position = position_dodge(0.9), color = "black") + 
+  scale_color_manual(name = "", values = c("grey", "blue", "red"))  +
+  scale_fill_manual(name = "", values = c("grey", "blue", "red")) + 
+  labs(y = "Number of variant proteins", x = "Comparison") + 
+  theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
+
+```
+
+
+
+# Re-calculating qvalue
+
+For the two following graphs, I $log_2$-transformed the normalized abundances and used those to calculate the qvalue (with the following sequence of "limma" functions: "lmFit", "contrasts.fit", "eBayes" and "topTable" - this last one using adjust.method = "BH")
+
+## Re-calculating zscore ratio
+
+I calculated the zscore with the formula: $$zscore = (X - MEAN) / STDEV$$
+
+Where X is the average abundance of each protein in a sample, MEAN and STDEV are the average and the standard deviation, respectively, of the abundance of each protein accross the experiment. 
+
+I calculated the ratios and then I did the filtering that the people from U Laval did $$|log_2(zScore Ratio)| > 1.96 \cap qValue < 0.05$$
 
 ```{r Calculate scores, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 zscore_ <- list()
@@ -61,23 +131,18 @@ for (i in contrast.matrix[1,] %>% names()) {
   results[[i]] <- topTable(fit, number = 4848, adjust.method = "BH", coef = i)
   combined_results[[i]] <- data.frame(Zscore_ratio = zscore_ratio[, a], 
                                       qValue = results[[i]][rownames(zscore_ratio), "adj.P.Val"])
-  filtered_results[[i]] <- filter(combined_results[[i]], abs(Zscore_ratio) > 1.96 & qValue < 0.05)
+  combined_results[[i]] <-  combined_results[[i]][!is.nan(combined_results[[i]]$Zscore_ratio), ]
+  filtered_results[[i]] <- filter(combined_results[[i]],  abs(Zscore_ratio) > 1.96 & qValue < 0.05)
+  
   Down_regulated <- c(Down_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio < 0), 1]))
   Up_regulated <- c(Up_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio > 0), 1]))
   Total <-  c(Total, nrow(filtered_results[[i]]))
-  a <- length(Down_regulated)
-  names(Up_regulated)[a] <- names(Down_regulated)[a] <- names(Total)[a] <- i
 }
   
+names(Up_regulated) <- names(Down_regulated) <- names(Total) <- contrast.matrix[1,] %>% names()
+
 ```
 
-For this graph, I calculated the zscore ratios. The zscore I calculated with the formula:
-
-$$zscore = (X - MEAN) / STDEV$$
-
-Where X is the average abundance of each protein in a sample, MEAN and STDEV are the average and the standard deviation, respectively, of the abundance of each protein accross the experiment. 
-
-I calculated the ratios and did the $log_2$ transformation, then I did the filtering that the people from U Laval did (|zscore ratio| > 1.96 & qValue < 0.05).
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 summary_table <- data.frame(Comparison = combined_results %>% names(),
@@ -95,14 +160,15 @@ ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) 
   theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
 
 ```
-```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-zscore_ratios_log2 <- read.delim("zscore_ratios_log2.txt", header = T, stringsAsFactors = F)
-zscores_correct_ratio_log2 <- 1 / (2 ^ zscore_ratios_log2[, 3:8]) %>% log2
-rownames(zscores_correct_ratio_log2) <- zscore_ratios_log2$Accession
-colnames(zscores_correct_ratio_log2) <- c("IFN.Control", "Virus.Control", 
-                                          "IFN_Virus.Control", "Virus.IFN",
-                                          "IFN_Virus.IFN", "IFN_Virus.Virus")
 
+## Transforming the zscore ratio from ULaval
+
+Here I took the $log_2$ transformed zscore ratios from the excel sheet, de-transformed the values, inverted them and re-transformed to $log_2$: $$log_2(1 / (2 ^ {OZR}))$$
+
+Then I did the filtering that the people from U Laval did: $$|log_2(zScore Ratio)| > 1.96 \cap qValue < 0.05$$
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 combined_results <- filtered_results <- list()
 
 Down_regulated <- Up_regulated <- Total <- c()
@@ -112,12 +178,13 @@ for (i in contrast.matrix[1,] %>% names()) {
   combined_results[[i]] <- data.frame(Zscore_ratio = zscores_correct_ratio_log2[, a], 
                                       qValue = results[[i]][rownames(zscores_correct_ratio_log2), "adj.P.Val"])
   filtered_results[[i]] <- filter(combined_results[[i]], abs(Zscore_ratio) > 1.96 & qValue < 0.05)
+  
   Down_regulated <- c(Down_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio < 0), 1]))
   Up_regulated <- c(Up_regulated, length(filtered_results[[i]][which(filtered_results[[i]]$Zscore_ratio > 0), 1]))
   Total <-  c(Total, nrow(filtered_results[[i]]))
-  a <- length(Down_regulated)
-  names(Up_regulated)[a] <- names(Down_regulated)[a] <- names(Total)[a] <- i
 }
+
+names(Up_regulated) <- names(Down_regulated) <- names(Total) <- contrast.matrix[1,] %>% names()
 
 ```
 
@@ -131,7 +198,7 @@ plot_summary <- reshape2::melt(summary_table, id = "Comparison")
 
 ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) +
   geom_col(position = "dodge") + 
-  geom_text(aes( label = value, y = value + 20), position = position_dodge(0.9), color = "black") + 
+  geom_text(aes( label = value, y = value + 10), position = position_dodge(0.9), color = "black") + 
   scale_color_manual(name = "", values = c("grey", "blue", "red"))  +
   scale_fill_manual(name = "", values = c("grey", "blue", "red")) + 
   labs(y = "Number of variant proteins", x = "Comparison") + 
@@ -139,4 +206,6 @@ ggplot(plot_summary, aes(Comparison, value, fill = variable, color = variable)) 
 
 ```
 
-Here I took the $log_2$ transformed zscore ratios from the excel sheet, de-transformed the values ($2^X$, being X each abundance ratio) and got the inverse (1/de-transformed values). Then I did the filtering that the people from U Laval did (|$log_2$(zscore ratio)| > 1.96 & qValue < 0.05).
+# Overall
+
+Basically I cannot get the same results either using the original zScore ratio and transforming with $log_2(1 / (2 ^ {OZR}))$ or with $-1 * OZR$ and using the original qValues, recalculating the qValue and transforming the original zscore or reca

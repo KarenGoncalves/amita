@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE,
 library(magrittr)
 library(reshape2)
 library(tidyverse)
+library(ggforce)
 
 ```
 
@@ -27,13 +28,13 @@ status <- org.adj.pVal[, c("Accession", grep("stat", colnames(org.adj.pVal), val
 colnames(status) <- gsub("_statVariant", "", colnames(status))
 ```
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 melt_qval <- melt(qval, id = "Accession") %>% cbind(Variable = "qValue")
 melt_zscore <- melt(zscore_ratio, id = "Accession") %>% cbind(Variable = "zscore_ratio")
 melt_status <- melt(status, id = "Accession") %>% cbind(Variable = "status")
 colnames(melt_qval)[2] <- colnames(melt_zscore)[2] <- colnames(melt_status)[2] <- "Test"
 
-for_plots <- data.frame(melt_qval, melt_zscore %>% select(value), melt_status %>% select(value))
+for_plots <- data.frame(melt_qval, melt_zscore[, "value"], melt_status[, "value"])
 colnames(for_plots) <- c("Accession", "Test", "qValue", "variable", "Zscore_ratio", "Status")
 for_plots$variable = NULL
 
@@ -46,23 +47,29 @@ for (i in levels(for_plots$Test)) {
   Up_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, i] < -1.96, i])
   Down_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, i]  > 1.96, i])
   summary_plot <- rbind(summary_plot, c(Total, Up_regulated, Down_regulated)) %>% as.data.frame()
-  colnames(summary_plot) <- c("Total", "Up_regulated", "Down_regulated")
+  colnames(summary_plot) <- c("Total", "Up-regulated", "Down-regulated")
 
 }
 rownames(summary_plot) <- summary_plot$Test <- levels(for_plots$Test)
 ```
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_summary <- reshape2::melt(summary_plot, id = "Test")
-plot_summary$Test <- factor(plot_summary$Test, 
-                            levels = c("IFN.Control", "Virus.Control", "IFN_Virus.Control", 
-                                       "IFN_Virus.IFN", "IFN_Virus.Virus"))
+plot_summary$Test <- as.character(plot_summary$Test) %>% 
+  gsub(pattern = "IFN_Virus", replacement = "VI") %>% 
+  gsub(pattern = "Virus", replacement = "NL") %>%
+  gsub(pattern = "\\.", replacement = " vs ") %>%
+  factor(levels = c("IFN vs Control", "NL vs Control", "VI vs Control", 
+                    "VI vs IFN", "VI vs NL"))
+
 ggplot(plot_summary, aes(Test, value, fill = variable, color = variable)) +
   geom_col(position = "dodge2") + 
   geom_text(aes( label = value, y = value + 10), position = position_dodge(0.9), color = "black") + 
   scale_color_manual(name = "", values = c("grey", "red", "blue"))  +
   scale_fill_manual(name = "", values = c("grey", "red", "blue")) + 
   labs(y = "Number of variant proteins", x = "Comparison") + 
-  theme_bw() + theme(axis.text.x = element_text(angle = 90, color = "black"))
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(color = "black"))
 
 ```
 
@@ -83,7 +90,7 @@ NL1 | 1
 NL2 | 1
 NL3 | 1
 
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 normalized_abundances <- read.delim("normalized_abundances.txt", header = T, stringsAsFactors = F)
 normalized_abundances$gene_name <- gsub(".*GN=(\\w+).*", "\\1", normalized_abundances$Description)
 norm_abundances <- data.frame(normalized_abundances[,3:14] %>% log2(), 
@@ -110,7 +117,7 @@ plot_boxplot$Normalization <- "After Normalization"
 ```
 
 
-```{r include=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 
 normalization_factors <- c(
   "CTRL1" = 1.13, "CTRL2" = 0.96, "CTRL3" = 1.05, 
@@ -121,12 +128,12 @@ normalization_factors <- c(
 org_abundances <- data.frame(0,0)
 
 for (i in names(normalization_factors)) { 
-  if (grepl("VI", i)){ 
+  if (grepl("VI", i)) { 
     a <- gsub("VI", "IFN_VIRUS", i)
     org_abundances <- data.frame(cbind(org_abundances, (normalized_abundances[, a] * normalization_factors[i]) %>% log2()))
     colnames(org_abundances)[ncol(org_abundances)] <- a
     
-  } else if (grepl("NL", i)){ 
+  } else if (grepl("NL", i)) { 
     a <- gsub("NL", "VIRUS", i) 
     org_abundances <- data.frame(cbind(org_abundances, (normalized_abundances[, a] * normalization_factors[i]) %>% log2()))
     colnames(org_abundances)[ncol(org_abundances)] <- a
@@ -157,7 +164,7 @@ for (i in 1:nrow(plot_boxplot_org)) {
 }
 plot_boxplot_org$Normalization <- "Before Normalization"
 ```
-```{r echo=FALSE, fig.height=10, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_boxplot_org$variable <- factor(plot_boxplot_org$variable, 
                                 levels = c(paste0("CTRL", 1:3), paste0("IFN", 1:3),
                                            paste0("VI", 1:3), paste0("NL", 1:3)))
@@ -168,12 +175,90 @@ joined_plots$Normalization <- factor(joined_plots$Normalization,
                                      levels = c("Before Normalization", "After Normalization"))
 
 ggplot(joined_plots, aes(variable, value, fill = Test)) + 
-  geom_boxplot() + scale_fill_manual(values = c("#db8823", "#106909", "#8f2424", "#1082b3"))+
+  geom_boxplot() + scale_fill_manual(values = c("#db8823", "#106909", "#8f2424", "#1082b3")) +
   labs(x = "", y = expression(log[2](Intensity))) +
   theme_bw() + 
   theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
         legend.position = "none") + 
-  facet_wrap(~Normalization, nrow = 2)
+  facet_wrap(~Normalization, nrow = 1)
 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+pca_data <- data.frame(Replicate = plot_boxplot$variable %>% unique(),
+                       Sample = gsub("(\\w+)\\d", "\\1", plot_boxplot$variable %>% unique()),
+                       PC1 = c(32.8, 34.8, 47, 25.9, 28, 46, -52, 0.5, 10.3, -68, -59, -44),
+                       PC2 = c(28, 22, -9.9, -9, -36, -42, 15.7, 13.8, 56.5, -14.8, -10.1, -14))
+
+ggplot(pca_data, aes(PC1, PC2, color = Sample, label = Replicate)) + 
+  labs(x = "PC1: 38.1% expl. variation", y = "PC2: 15.4% expl. variation") + 
+  scale_color_manual(values = c("#1082b3", "#db8823", "grey3", "#106909")) + 
+  geom_hline(yintercept = 0, linetype = 2, alpha = 0.5) + 
+  geom_vline(xintercept = 0, linetype = 2, alpha = 0.5) +
+  geom_label() +
+  scale_x_continuous(breaks = seq(-75, 50, 12.5)) + 
+  theme_bw() + theme(legend.position = "none",
+                     axis.text = element_text(color = "black"))
+```
+
+```{r echo=FALSE, fig.height=10, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+mean <- apply(norm_abundances, 1, mean)
+stdev <- apply(norm_abundances, 1, sd)
+
+heatmap_data <- data.frame(cbind((norm_abundances - mean) / stdev, Accession = normalized_abundances$Accession))
+colnames(heatmap_data)[1:12] <- plot_boxplot$variable %>% unique()
+
+dend_samples <- as.matrix(norm_abundances) %>% t() %>% dist() %>% hclust() 
+order_samples <- dend_samples$order
+
+dend_prots <- as.matrix(norm_abundances) %>% dist() %>% hclust() 
+order_prots <- dend_prots$order
+
+
+melt_heat <- melt(heatmap_data)
+melt_heat$variable <- factor(melt_heat$variable, levels = (plot_boxplot$variable %>% unique())[order_samples])
+melt_heat$Accession <- factor(melt_heat$Accession, levels = rownames(norm_abundances)[order_prots])
+
+ggplot(melt_heat, aes(x = variable, y = Accession, color = value)) + 
+  labs(x = "", y = "") + geom_tile() + theme_bw() + 
+  scale_color_gradient2(high = "firebrick2", mid = "white", low = "blue", name = "zScore") + 
+  theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+Tests <- for_plots
+
+for (prot in 1:nrow(Tests)) {
+    
+    if (Tests$Status[prot] == "VARIANT") {
+      
+      if (Tests$Zscore_ratio[prot] > 1.96 & Tests$qValue[prot] < 0.01) {
+        Tests$Status[prot] <- "Down_regulated"
+      } else if (Tests$Zscore_ratio[prot] < -1.96 & Tests$qValue[prot] < 0.01) {
+        Tests$Status[prot] <- "Up_regulated"
+      } else {
+        Tests$Status[prot] <- FALSE
+      }
+    } else {
+      Tests$Status[prot] <- FALSE
+    }
+  }
+
+volcanos <- 
+  ggplot(Tests, aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = Accession)) + 
+  geom_point() + geom_text(data = Tests %>% filter(Status != FALSE ), check_overlap = T) + 
+  scale_color_manual(values = c("blue", "grey", "red")) + 
+  labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue)), title = i) + 
+  theme_bw() + theme(legend.position = "none") + 
+  facet_wrap(~Test, nrow = 3 )
+
+
+
+```
+
+```{r fig.height=10, fig.width=8, message=FALSE, warning=FALSE, paged.print=FALSE}
+volcanos
 ```
 

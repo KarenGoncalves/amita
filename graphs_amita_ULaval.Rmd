@@ -183,6 +183,17 @@ ggplot(joined_plots, aes(variable, value, fill = Test)) +
   facet_wrap(~Normalization, nrow = 1)
 
 ```
+```{r echo=FALSE, fig.height=10, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+ggplot(joined_plots, aes(variable, value, fill = Test)) + 
+  geom_boxplot() + scale_fill_manual(values = c("#db8823", "#106909", "#8f2424", "#1082b3")) +
+  labs(x = "", y = expression(log[2](Intensity))) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
+        legend.position = "none") + 
+  facet_wrap(~Normalization, nrow = 2)
+
+```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 pca_data <- data.frame(Replicate = plot_boxplot$variable %>% unique(),

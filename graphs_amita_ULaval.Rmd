@@ -38,28 +38,39 @@ for_plots <- data.frame(melt_qval, melt_zscore[, "value"], melt_status[, "value"
 colnames(for_plots) <- c("Accession", "Test", "qValue", "variable", "Zscore_ratio", "Status")
 for_plots$variable = NULL
 
+for_plots$Test <- as.character(for_plots$Test) %>%
+  gsub(pattern = "IFN_Virus", replacement = "VI") %>%
+  gsub(pattern = "Virus", replacement = "NL") %>%
+  gsub(pattern = "\\.", replacement = " vs ") %>%
+  factor(levels = c("IFN vs Control", "NL vs Control", "VI vs Control", 
+                    "VI vs IFN", "VI vs NL"))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 Total <- Down_regulated <- Up_regulated <- c()
 summary_plot <- data.frame(matrix(nrow = 0, ncol = 3))
 dap <- list()
 for (i in levels(for_plots$Test)) {
-  dap[[i]] <- status[status[, i] == "VARIANT", "Accession"]
+  a <- gsub(replacement = "IFN_Virus", pattern = "VI", x = i) %>%
+    gsub(replacement = "Virus", pattern = "NL") %>%
+    gsub(replacement = "\\.", pattern = " vs ") 
+  
+  zsc <- paste0(a, "_ZscRatio"); qv <- paste0(a, "_qvalue"); statv <- paste0(a, "_statVariant")
+  
+  dap[[i]] <- org.adj.pVal[ abs(org.adj.pVal[, zsc]) > 1.96 & org.adj.pVal[, statv] == "VARIANT", "Accession" ]
+  
   Total <- length(dap[[i]])
-  Up_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, i] < -1.96, i])
-  Down_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, i]  > 1.96, i])
+  Up_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, a] < -1.96, a])
+  Down_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, a]  > 1.96, a])
   summary_plot <- rbind(summary_plot, c(Total, Up_regulated, Down_regulated)) %>% as.data.frame()
   colnames(summary_plot) <- c("Total", "Up-regulated", "Down-regulated")
 
 }
 rownames(summary_plot) <- summary_plot$Test <- levels(for_plots$Test)
 ```
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_summary <- reshape2::melt(summary_plot, id = "Test")
-plot_summary$Test <- as.character(plot_summary$Test) %>% 
-  gsub(pattern = "IFN_Virus", replacement = "VI") %>% 
-  gsub(pattern = "Virus", replacement = "NL") %>%
-  gsub(pattern = "\\.", replacement = " vs ") %>%
-  factor(levels = c("IFN vs Control", "NL vs Control", "VI vs Control", 
-                    "VI vs IFN", "VI vs NL"))
 
 ggplot(plot_summary, aes(Test, value, fill = variable, color = variable)) +
   geom_col(position = "dodge2") + 
@@ -118,7 +129,6 @@ plot_boxplot$Normalization <- "After Normalization"
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-
 normalization_factors <- c(
   "CTRL1" = 1.13, "CTRL2" = 0.96, "CTRL3" = 1.05, 
   "IFN1" = 1.01, "IFN2" = 0.97, "IFN3" = 0.95, 
@@ -145,7 +155,10 @@ for (i in names(normalization_factors)) {
 org_abundances$X0 <- org_abundances$X0.1 <- NULL
 
 rownames(org_abundances) <- normalized_abundances$Accession
+```
 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_boxplot_org <- melt(org_abundances)
 plot_boxplot_org$Test <- plot_boxplot_org$variable <- as.character(plot_boxplot_org$variable)
 
@@ -164,6 +177,7 @@ for (i in 1:nrow(plot_boxplot_org)) {
 }
 plot_boxplot_org$Normalization <- "Before Normalization"
 ```
+
 ```{r echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_boxplot_org$variable <- factor(plot_boxplot_org$variable, 
                                 levels = c(paste0("CTRL", 1:3), paste0("IFN", 1:3),
@@ -183,6 +197,7 @@ ggplot(joined_plots, aes(variable, value, fill = Test)) +
   facet_wrap(~Normalization, nrow = 1)
 
 ```
+
 ```{r echo=FALSE, fig.height=10, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
 
 ggplot(joined_plots, aes(variable, value, fill = Test)) + 
@@ -229,7 +244,10 @@ order_prots <- dend_prots$order
 melt_heat <- melt(heatmap_data)
 melt_heat$variable <- factor(melt_heat$variable, levels = (plot_boxplot$variable %>% unique())[order_samples])
 melt_heat$Accession <- factor(melt_heat$Accession, levels = rownames(norm_abundances)[order_prots])
+```
 
+
+```{r echo=FALSE, fig.height=10, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
 ggplot(melt_heat, aes(x = variable, y = Accession, color = value)) + 
   labs(x = "", y = "") + geom_tile() + theme_bw() + 
   scale_color_gradient2(high = "firebrick2", mid = "white", low = "blue", name = "zScore") + 
@@ -240,36 +258,89 @@ ggplot(melt_heat, aes(x = variable, y = Accession, color = value)) +
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 Tests <- for_plots
-
+Tests$Status <-  as.character(Tests$Status)
 for (prot in 1:nrow(Tests)) {
     
     if (Tests$Status[prot] == "VARIANT") {
       
-      if (Tests$Zscore_ratio[prot] > 1.96 & Tests$qValue[prot] < 0.01) {
-        Tests$Status[prot] <- "Down_regulated"
-      } else if (Tests$Zscore_ratio[prot] < -1.96 & Tests$qValue[prot] < 0.01) {
-        Tests$Status[prot] <- "Up_regulated"
+      if (Tests$Zscore_ratio[prot] > 1.96 ) {
+        Tests$Status[prot] <- "Down-regulated"
+      } else if (Tests$Zscore_ratio[prot] < -1.96) {
+        Tests$Status[prot] <- "Up-regulated"
       } else {
         Tests$Status[prot] <- FALSE
       }
+      
+    } else if (!is.na(Tests$qValue[prot]) & Tests$qValue[prot] < 0.05) {
+      
+      if (Tests$Zscore_ratio[prot] > 1.96 ) {
+        Tests$Status[prot] <- "Down-regulated"
+      } else if (Tests$Zscore_ratio[prot] < -1.96) {
+        Tests$Status[prot] <- "Up-regulated"
+      } else {
+        Tests$Status[prot] <- FALSE
+      }
+      
     } else {
       Tests$Status[prot] <- FALSE
     }
-  }
+}
+```
 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 volcanos <- 
   ggplot(Tests, aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = Accession)) + 
-  geom_point() + geom_text(data = Tests %>% filter(Status != FALSE ), check_overlap = T) + 
+  geom_point() + #geom_text(data = Tests %>% filter(Status != FALSE ), check_overlap = T) + 
   scale_color_manual(values = c("blue", "grey", "red")) + 
-  labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue)), title = i) + 
+  labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue))) + 
   theme_bw() + theme(legend.position = "none") + 
   facet_wrap(~Test, nrow = 3 )
-
-
 
 ```
 
 ```{r fig.height=10, fig.width=8, message=FALSE, warning=FALSE, paged.print=FALSE}
 volcanos
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ensembldb)
+library(EnsDb.Hsapiens.v86)
+edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
+
+txs <- transcripts(edb, columns = c("gene_name", "uniprot_id"))@elementMetadata@listData %>%
+  as.data.frame() %>% dplyr::select(uniprot_id, gene_name) 
+
+txs <- dplyr::filter(txs, !is.na(uniprot_id) & !is.na(gene_name))
+
+gene_names <- data.frame(0, 0)
+for (i in org.adj.pVal$Accession) { 
+  if (i %in% gene_names$X0) {next}
+  gene_names <- rbind(gene_names, c(X0 = i, X0.1 = as.character(txs$gene_name[txs$uniprot_id == i][1])))
+}
+
+gene_names <- gene_names[-1,]
+colnames(gene_names) <- colnames(txs)
+```
+
+```{r echo=FALSE, fig.height=4, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+vplots_data <- list()
+
+for (i in unique(Tests$Test)) {
+  vplots_data[[i]] <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name)
+  print(
+    ggplot(vplots_data[[i]], aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
+      geom_point() + 
+      geom_text(data = vplots_data[[i]] %>% dplyr::filter(Status != FALSE ), 
+                nudge_y = 0.5, check_overlap = T, size = 3) + 
+      scale_color_manual(values = c("blue", "grey", "red")) + 
+      #scale_x_continuous(limits = c(-10, 12), breaks = c(seq(-10, 12, 4), 0)) + 
+      scale_y_continuous(breaks = seq(0, 15, 2.5)) + 
+      labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue)), title = i) + 
+      theme_bw() + theme(legend.position = "none") 
+    
+  )
+}
 ```
 

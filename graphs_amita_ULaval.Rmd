@@ -1,7 +1,7 @@
 ---
 title: "Graphs for Amita's paper - with data from U Laval"
 author: "Karen Cristine Goncalves dos Santos"
-date: "4/9/2020"
+date: "`r format(Sys.time(), '%b %d %Y')`"
 output: pdf_document
 ---
 
@@ -13,7 +13,29 @@ library(reshape2)
 library(tidyverse)
 library(ggforce)
 
+
 ```
+
+```{r echo=FALSE, fig.height=6, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+quants <- data.frame(Test = c(
+  "IFN vs Control", "NL vs Control", "VI vs Control", "VI vs IFN", "VI vs NL"),
+  Identified = rep(5223, 5),
+  Quantifiable = c(4562, 4573, 4629, 4664, 4611),
+  Quantified = c(4321, 4325, 4366, 4393, 4356)
+  )
+
+melt_quants <- melt(quants, id = "Test")
+
+ggplot(melt_quants, aes(Test, value, fill = variable, color = variable)) + 
+  geom_col(position = "dodge2") + scale_fill_discrete(name = "") + 
+  scale_color_discrete(name = "") +
+  geom_text(aes(label = value, y = value - 290), 
+            angle = 90, position = position_dodge(0.9), color = "black") +
+  labs(x = "Test", y = "Number of proteins") +
+  theme_bw() + theme(axis.text = element_text(color = "black"),
+                     legend.position = "bottom")
+```
+
 
 ```{r include=FALSE}
 org.adj.pVal <- read.delim("qval_zscore_stat.txt", header = T, stringsAsFactors = F)
@@ -228,6 +250,7 @@ ggplot(pca_data, aes(PC1, PC2, color = Sample, label = Replicate)) +
 ```
 
 ```{r echo=FALSE, fig.height=10, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(ComplexHeatmap)
 mean <- apply(norm_abundances, 1, mean)
 stdev <- apply(norm_abundances, 1, sd)
 
@@ -240,21 +263,19 @@ order_samples <- dend_samples$order
 dend_prots <- as.matrix(norm_abundances) %>% dist() %>% hclust() 
 order_prots <- dend_prots$order
 
+Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
+        cluster_rows =  dend_prots, cluster_columns = dend_samples,
+        row_labels = rep("", nrow(heatmap_data)),
+        column_title = "Dendrogram calculated with Zscore",
+        row_title = "Dendrogram calculated with Zscore",
+        show_row_dend = F)
 
-melt_heat <- melt(heatmap_data)
-melt_heat$variable <- factor(melt_heat$variable, levels = (plot_boxplot$variable %>% unique())[order_samples])
-melt_heat$Accession <- factor(melt_heat$Accession, levels = rownames(norm_abundances)[order_prots])
+Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
+        row_labels = rep("", nrow(heatmap_data)), cluster_rows = T, show_row_dend = F,
+        column_title = "Dendrogram calculated with normalized abundances",
+        row_title = "Dendrogram calculated with normalized abundances")
 ```
 
-
-```{r echo=FALSE, fig.height=10, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
-ggplot(melt_heat, aes(x = variable, y = Accession, color = value)) + 
-  labs(x = "", y = "") + geom_tile() + theme_bw() + 
-  scale_color_gradient2(high = "firebrick2", mid = "white", low = "blue", name = "zScore") + 
-  theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())
-```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 Tests <- for_plots
@@ -331,7 +352,7 @@ for (i in unique(Tests$Test)) {
   vplots_data[[i]] <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name)
   print(
     ggplot(vplots_data[[i]], aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
-      geom_point() + 
+      geom_point(size = 1) + 
       geom_text(data = vplots_data[[i]] %>% dplyr::filter(Status != FALSE ), 
                 nudge_y = 0.5, check_overlap = T, size = 3) + 
       scale_color_manual(values = c("blue", "grey", "red")) + 
@@ -342,5 +363,38 @@ for (i in unique(Tests$Test)) {
     
   )
 }
+```
+
+```{r echo=FALSE, fig.height=12, fig.width=4, message=FALSE, warning=FALSE, paged.print=FALSE}
+heatmap_dt <- data.frame(heatmap_data, gene_names)
+heatmap_dt <- heatmap_dt[, !colnames(heatmap_dt) %in% c("Accession", "uniprot_id")]
+
+deregs <- samples <- data <- dereg_heatmaps <- name <- list()
+for (i in levels(Tests$Test)) {
+  if (i %in% c("IFN vs Control", "NL vs Control")) {
+    deregs[[i]] <- Tests$Accession[Tests$Test == i & Tests$Status %in% c("Up-regulated", "Down-regulated")]
+    name[[i]] <- heatmap_dt$gene_name[rownames(heatmap_dt) %in% deregs[[i]]]
+    
+    for (prot in 1:length(name[[i]])) {
+      name[[i]][prot] <- ifelse(is.na(name[[i]][prot]),
+                                deregs[[i]][prot],
+                                name[[i]][prot])
+    }
+    
+    samples[[i]] <- sort(paste0(strsplit(i, split = " vs ")[[1]], rep(1:3, 2)))
+    samples[[i]] <- gsub("Control", "CTRL", samples[[i]])
+    data[[i]] <- heatmap_dt[deregs[[i]], samples[[i]]]
+    dereg_heatmaps[[i]] <- Heatmap(data[[i]], row_names_gp = gpar(fontsize = 6),
+                                   column_title = i, 
+                                   column_names_gp = gpar(fontsize = 9),
+                                   column_dend_height = unit(2.5, "mm"),
+                                   column_names_side = "top", row_names_side = "left",
+                                   row_labels = name[[i]], name = "log2(Intensity)"
+                                   )
+  }
+}
+
+dereg_heatmaps[[1]]
+dereg_heatmaps[[2]]
 ```
 

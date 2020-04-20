@@ -16,9 +16,9 @@ library(ggforce)
 
 ```
 
-```{r echo=FALSE, fig.height=6, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
 quants <- data.frame(Test = c(
-  "IFN vs Control", "NL vs Control", "VI vs Control", "VI vs IFN", "VI vs NL"),
+  "IFN vs\nControl", "HIV1 vs\nControl", "HIV1+IFN vs\nControl", "HIV1+IFN\nvs IFN", "HIV1+IFN\nvs HIV-1"),
   Identified = rep(5223, 5),
   Quantifiable = c(4562, 4573, 4629, 4664, 4611),
   Quantified = c(4321, 4325, 4366, 4393, 4356)
@@ -61,21 +61,22 @@ colnames(for_plots) <- c("Accession", "Test", "qValue", "variable", "Zscore_rati
 for_plots$variable = NULL
 
 for_plots$Test <- as.character(for_plots$Test) %>%
-  gsub(pattern = "IFN_Virus", replacement = "VI") %>%
-  gsub(pattern = "Virus", replacement = "NL") %>%
-  gsub(pattern = "\\.", replacement = " vs ") %>%
-  factor(levels = c("IFN vs Control", "NL vs Control", "VI vs Control", 
-                    "VI vs IFN", "VI vs NL"))
+  gsub(pattern = "IFN_Virus", replacement = "HIV1+IFN") %>%
+  gsub(pattern = "Virus", replacement = "HIV1") %>%
+  gsub(pattern = "\\.", replacement = "\nvs ") %>%
+  factor(levels = c("IFN\nvs Control", "HIV1\nvs Control", "HIV1+IFN\nvs Control", 
+                    "HIV1+IFN\nvs IFN", "HIV1+IFN\nvs HIV1"))
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 Total <- Down_regulated <- Up_regulated <- c()
 summary_plot <- data.frame(matrix(nrow = 0, ncol = 3))
 dap <- list()
+
 for (i in levels(for_plots$Test)) {
-  a <- gsub(replacement = "IFN_Virus", pattern = "VI", x = i) %>%
-    gsub(replacement = "Virus", pattern = "NL") %>%
-    gsub(replacement = "\\.", pattern = " vs ") 
+  a <- gsub(replacement = "IFN_Virus", pattern = "HIV1\\+IFN", x = i) %>%
+    gsub(replacement = "Virus", pattern = "HIV1") %>%
+    gsub(replacement = "\\.", pattern = "\nvs ") 
   
   zsc <- paste0(a, "_ZscRatio"); qv <- paste0(a, "_qvalue"); statv <- paste0(a, "_statVariant")
   
@@ -94,6 +95,8 @@ rownames(summary_plot) <- summary_plot$Test <- levels(for_plots$Test)
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_summary <- reshape2::melt(summary_plot, id = "Test")
 
+plot_summary$Test <- factor(plot_summary$Test, levels = levels(for_plots$Test))
+
 ggplot(plot_summary, aes(Test, value, fill = variable, color = variable)) +
   geom_col(position = "dodge2") + 
   geom_text(aes( label = value, y = value + 10), position = position_dodge(0.9), color = "black") + 
@@ -102,26 +105,10 @@ ggplot(plot_summary, aes(Test, value, fill = variable, color = variable)) +
   labs(y = "Number of variant proteins", x = "Comparison") + 
   theme_bw() + 
   theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(color = "black"))
+        axis.text.y = element_text(color = "black"),
+        legend.position = "bottom")
 
 ```
-
-To do the boxplot of the data before normalization, I got the normalization factors from page 3 of the report as I do not have the actual data before normalization. However, as the data was re-analysed, maybe those are not the right normalization factors.
-
-Sample | Normalization factors
-:-:|:-:
-CTRL1 | 1.13
-CTRL2 | 0.96
-CTRL3 |1.05
-IFN1 | 1.01
-IFN2 | 0.97
-IFN3 | 0.95
-VI1 | 1.08
-VI2 | 0.97
-VI3 | 1.01
-NL1 | 1
-NL2 | 1
-NL3 | 1
 
 ```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 normalized_abundances <- read.delim("normalized_abundances.txt", header = T, stringsAsFactors = F)
@@ -134,15 +121,17 @@ plot_boxplot$Test <- plot_boxplot$variable <- as.character(plot_boxplot$variable
 
 for (i in 1:nrow(plot_boxplot)) {
   if (grepl("CTRL", plot_boxplot$Test[i])) {
-    plot_boxplot$Test[i] = "Control"
+    plot_boxplot$Test[i] <- "Control"
+    plot_boxplot$variable[i] <- gsub("CTRL", "CTRL_", plot_boxplot$variable[i])
   } else if (grepl("^IFN\\d$", plot_boxplot$Test[i])) {
-    plot_boxplot$Test[i] = "IFN"
+    plot_boxplot$Test[i] <- "IFN"
+    plot_boxplot$variable[i] <- gsub("IFN", "IFN_", plot_boxplot$variable[i])
   } else if (grepl("^VIRUS\\d$", plot_boxplot$Test[i])) {
-    plot_boxplot$Test[i] = "NL"
-    plot_boxplot$variable[i] = gsub("VIRUS", "NL", plot_boxplot$variable[i])
+    plot_boxplot$Test[i] <- "HIV1"
+    plot_boxplot$variable[i] <- gsub("VIRUS", "HIV1_", plot_boxplot$variable[i])
   } else {
-    plot_boxplot$Test[i] = "VI"
-    plot_boxplot$variable[i] = gsub("IFN_VIRUS", "VI", plot_boxplot$variable[i])
+    plot_boxplot$Test[i] <- "HIV1+IFN"
+    plot_boxplot$variable[i] <- gsub("IFN_VIRUS", "HIV1+IFN_", plot_boxplot$variable[i])
   }
 }
 plot_boxplot$Normalization <- "After Normalization"
@@ -151,60 +140,43 @@ plot_boxplot$Normalization <- "After Normalization"
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-normalization_factors <- c(
-  "CTRL1" = 1.13, "CTRL2" = 0.96, "CTRL3" = 1.05, 
-  "IFN1" = 1.01, "IFN2" = 0.97, "IFN3" = 0.95, 
-  "VI1" = 1.08, "VI2" = 0.97, "VI3" = 1.01, 
-  "NL1" = 1, "NL2" = 1, "NL3" = 1)
+original_abundances <- read.delim("original_abundances.txt", header = T, stringsAsFactors = F)
+original_abundances <- original_abundances[original_abundances$Accession %in% normalized_abundances$Accession, ]
+colnames(original_abundances)[-1] <- 
+  paste0(gsub("Abundance\\.\\.F\\w+\\.\\.Sample\\.\\.", "", colnames(original_abundances)[-1]), 1:3)
 
-org_abundances <- data.frame(0,0)
+org_abundances <- data.frame(original_abundances[,2:13] %>% log2(), 
+                              row.names = original_abundances$Accession)
 
-for (i in names(normalization_factors)) { 
-  if (grepl("VI", i)) { 
-    a <- gsub("VI", "IFN_VIRUS", i)
-    org_abundances <- data.frame(cbind(org_abundances, (normalized_abundances[, a] * normalization_factors[i]) %>% log2()))
-    colnames(org_abundances)[ncol(org_abundances)] <- a
-    
-  } else if (grepl("NL", i)) { 
-    a <- gsub("NL", "VIRUS", i) 
-    org_abundances <- data.frame(cbind(org_abundances, (normalized_abundances[, a] * normalization_factors[i]) %>% log2()))
-    colnames(org_abundances)[ncol(org_abundances)] <- a
-  } else {
-    org_abundances <- data.frame(cbind(org_abundances, (normalized_abundances[, i] * normalization_factors[i]) %>% log2()))
-    colnames(org_abundances)[ncol(org_abundances)] <- i
-  }
-}
-org_abundances$X0 <- org_abundances$X0.1 <- NULL
-
-rownames(org_abundances) <- normalized_abundances$Accession
-```
-
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_boxplot_org <- melt(org_abundances)
 plot_boxplot_org$Test <- plot_boxplot_org$variable <- as.character(plot_boxplot_org$variable)
 
 for (i in 1:nrow(plot_boxplot_org)) {
   if (grepl("CTRL", plot_boxplot_org$Test[i])) {
-    plot_boxplot_org$Test[i] = "Control"
+    plot_boxplot_org$Test[i] <- "Control"
+    plot_boxplot_org$variable[i] <- gsub("CTRL", "CTRL_", plot_boxplot_org$variable[i])
   } else if (grepl("^IFN\\d$", plot_boxplot_org$Test[i])) {
-    plot_boxplot_org$Test[i] = "IFN"
+    plot_boxplot_org$Test[i] <- "IFN"
+    plot_boxplot_org$variable[i] <- gsub("IFN", "IFN_", plot_boxplot_org$variable[i])
   } else if (grepl("^VIRUS\\d$", plot_boxplot_org$Test[i])) {
-    plot_boxplot_org$Test[i] = "NL"
-    plot_boxplot_org$variable[i] = gsub("VIRUS", "NL", plot_boxplot_org$variable[i])
+    plot_boxplot_org$Test[i] <- "HIV1"
+    plot_boxplot_org$variable[i] <- gsub("VIRUS", "HIV1_", plot_boxplot_org$variable[i])
   } else {
-    plot_boxplot_org$Test[i] = "VI"
-    plot_boxplot_org$variable[i] = gsub("IFN_VIRUS", "VI", plot_boxplot_org$variable[i])
+    plot_boxplot_org$Test[i] <- "HIV1+IFN"
+    plot_boxplot_org$variable[i] <- gsub("IFN\\.VIRUS", "HIV1+IFN_", plot_boxplot_org$variable[i])
   }
 }
 plot_boxplot_org$Normalization <- "Before Normalization"
+
 ```
+
+
 
 ```{r echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, paged.print=FALSE}
 plot_boxplot_org$variable <- factor(plot_boxplot_org$variable, 
-                                levels = c(paste0("CTRL", 1:3), paste0("IFN", 1:3),
-                                           paste0("VI", 1:3), paste0("NL", 1:3)))
-plot_boxplot_org$Test <- factor(plot_boxplot_org$Test, levels = c("Control", "IFN", "VI", "NL"))
+                                levels = c(paste0("CTRL_", 1:3), paste0("IFN_", 1:3),
+                                           paste0("HIV1+IFN_", 1:3), paste0("HIV1_", 1:3)))
+plot_boxplot_org$Test <- factor(plot_boxplot_org$Test, levels = c("Control", "IFN", "HIV1+IFN", "HIV1"))
 
 joined_plots <- rbind(plot_boxplot, plot_boxplot_org)
 joined_plots$Normalization <- factor(joined_plots$Normalization, 
@@ -235,45 +207,43 @@ ggplot(joined_plots, aes(variable, value, fill = Test)) +
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 pca_data <- data.frame(Replicate = plot_boxplot$variable %>% unique(),
                        Sample = gsub("(\\w+)\\d", "\\1", plot_boxplot$variable %>% unique()),
-                       PC1 = c(32.8, 34.8, 47, 25.9, 28, 46, -52, 0.5, 10.3, -68, -59, -44),
-                       PC2 = c(28, 22, -9.9, -9, -36, -42, 15.7, 13.8, 56.5, -14.8, -10.1, -14))
+                       PC1 = c(51.2024, 36.6148, 34.5482, 49.1687, 30.2183, 27.3352, 
+                               -0.6656, 9.3559, -59.22, -45.736, -71.3252, -52.4968),
+                       PC2 = c(-10.2013, 24.966, 32.2231, -47.1303, -37.953, -8.705, 
+                               14.1425, 59.481, 16.1858, -15.1009, -16.0312, -11.8766))
 
 ggplot(pca_data, aes(PC1, PC2, color = Sample, label = Replicate)) + 
-  labs(x = "PC1: 38.1% expl. variation", y = "PC2: 15.4% expl. variation") + 
+  labs(x = "PC1: 35.4% expl. variation", y = "PC2: 15% expl. variation") + 
   scale_color_manual(values = c("#1082b3", "#db8823", "grey3", "#106909")) + 
   geom_hline(yintercept = 0, linetype = 2, alpha = 0.5) + 
   geom_vline(xintercept = 0, linetype = 2, alpha = 0.5) +
-  geom_label() +
-  scale_x_continuous(breaks = seq(-75, 50, 12.5)) + 
+  geom_text(aes(PC1, PC2 - 4)) + geom_point() +
+  #scale_x_continuous(breaks = seq(-75, 50, 12.5)) + 
   theme_bw() + theme(legend.position = "none",
                      axis.text = element_text(color = "black"))
 ```
 
 ```{r echo=FALSE, fig.height=10, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
 library(ComplexHeatmap)
-mean <- apply(norm_abundances, 1, mean)
-stdev <- apply(norm_abundances, 1, sd)
+mean <- apply(normalized_abundances[3:14], 1, mean)
+stdev <- apply(normalized_abundances[3:14], 1, sd)
 
-heatmap_data <- data.frame(cbind((norm_abundances - mean) / stdev, Accession = normalized_abundances$Accession))
+heatmap_data <- data.frame(cbind((normalized_abundances[3:14] - mean) / stdev, 
+                                 Accession = normalized_abundances$Accession))
 colnames(heatmap_data)[1:12] <- plot_boxplot$variable %>% unique()
 
-dend_samples <- as.matrix(norm_abundances) %>% t() %>% dist() %>% hclust() 
+dend_samples <- as.matrix(normalized_abundances[3:14]) %>% t() %>% dist() %>% hclust() 
 order_samples <- dend_samples$order
 
-dend_prots <- as.matrix(norm_abundances) %>% dist() %>% hclust() 
+dend_prots <- as.matrix(normalized_abundances[3:14]) %>% dist() %>% hclust() 
 order_prots <- dend_prots$order
 
 Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
-        cluster_rows =  dend_prots, cluster_columns = dend_samples,
+        cluster_columns = F, show_row_dend = F, cluster_rows = T,
+        show_column_dend = F, column_dend_side = "top",
         row_labels = rep("", nrow(heatmap_data)),
-        column_title = "Dendrogram calculated with Zscore",
-        row_title = "Dendrogram calculated with Zscore",
-        show_row_dend = F)
+        row_title = "Dendrogram calculated with Zscore")
 
-Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
-        row_labels = rep("", nrow(heatmap_data)), cluster_rows = T, show_row_dend = F,
-        column_title = "Dendrogram calculated with normalized abundances",
-        row_title = "Dendrogram calculated with normalized abundances")
 ```
 
 
@@ -308,22 +278,6 @@ for (prot in 1:nrow(Tests)) {
 }
 ```
 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-volcanos <- 
-  ggplot(Tests, aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = Accession)) + 
-  geom_point() + #geom_text(data = Tests %>% filter(Status != FALSE ), check_overlap = T) + 
-  scale_color_manual(values = c("blue", "grey", "red")) + 
-  labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue))) + 
-  theme_bw() + theme(legend.position = "none") + 
-  facet_wrap(~Test, nrow = 3 )
-
-```
-
-```{r fig.height=10, fig.width=8, message=FALSE, warning=FALSE, paged.print=FALSE}
-volcanos
-```
-
 ```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 library(ensembldb)
 library(EnsDb.Hsapiens.v86)
@@ -344,34 +298,54 @@ gene_names <- gene_names[-1,]
 colnames(gene_names) <- colnames(txs)
 ```
 
-```{r echo=FALSE, fig.height=4, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
-
+```{r echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(ggrepel)
 vplots_data <- list()
 
 for (i in unique(Tests$Test)) {
-  vplots_data[[i]] <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name)
-  print(
-    ggplot(vplots_data[[i]], aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
-      geom_point(size = 1) + 
-      geom_text(data = vplots_data[[i]] %>% dplyr::filter(Status != FALSE ), 
-                nudge_y = 0.5, check_overlap = T, size = 3) + 
-      scale_color_manual(values = c("blue", "grey", "red")) + 
-      #scale_x_continuous(limits = c(-10, 12), breaks = c(seq(-10, 12, 4), 0)) + 
-      scale_y_continuous(breaks = seq(0, 15, 2.5)) + 
-      labs(x = expression(log[2]("Z-Score Ratio")), y = expression(-log[10](qValue)), title = i) + 
-      theme_bw() + theme(legend.position = "none") 
+  if (i == "HIV1\nvs Control") {
+    data <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name) 
     
-  )
+    vplots_data[[i]] <- 
+      ggplot(data, aes(-1*Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
+      geom_point(size = 1) + 
+      geom_text(data =  dplyr::filter(data, Status != FALSE), 
+                nudge_y = c(0.3, -0.3), size = 2, check_overlap = T) +
+      geom_point(aes(x = -1 * (data$Zscore_ratio[data$Accession == "P12270"]), 
+                     y = -log10(data$qValue[data$Accession == "P12270"])),
+                 size = 3, color = "black") +
+      scale_color_manual(values = c("blue", "grey", "red")) + 
+      labs(x = expression(log[2]("Z-Score Ratio")), 
+           y = expression(-log[10](qValue)), 
+           title = gsub("\n", " ", i)) + 
+      theme_bw() + theme(legend.position = "none") 
+  } else {
+    data <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name) 
+    
+    vplots_data[[i]] <- 
+      ggplot(data, aes(-1 * Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
+      geom_point(size = 1) + 
+      geom_text(data =  dplyr::filter(data, Status != FALSE), 
+                nudge_y = c(0.3, -0.3), size = 2.5, check_overlap = T) +
+      scale_color_manual(values = c("blue", "grey", "red")) + 
+      labs(x = expression(log[2]("Z-Score Ratio")), 
+           y = expression(-log[10](qValue)), 
+           title = gsub("\n", " ", i)) + 
+      theme_bw() + theme(legend.position = "none") 
+  }
+  
+  print( vplots_data[[i]])
 }
 ```
 
-```{r echo=FALSE, fig.height=12, fig.width=4, message=FALSE, warning=FALSE, paged.print=FALSE}
-heatmap_dt <- data.frame(heatmap_data, gene_names)
+```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+heatmap_dt <- data.frame(heatmap_data[, -13], 
+  gene_names, row.names = heatmap_data$Accession)
 heatmap_dt <- heatmap_dt[, !colnames(heatmap_dt) %in% c("Accession", "uniprot_id")]
-
-deregs <- samples <- data <- dereg_heatmaps <- name <- list()
+colnames(heatmap_dt) <- c(colnames(heatmap_data)[-13],  "gene_name")
+deregs <- samples <- data <- dereg_heatmaps <- name <- fontface <- list()
 for (i in levels(Tests$Test)) {
-  if (i %in% c("IFN vs Control", "NL vs Control")) {
+  if (i %in% c("IFN\nvs Control", "HIV1\nvs Control")) {
     deregs[[i]] <- Tests$Accession[Tests$Test == i & Tests$Status %in% c("Up-regulated", "Down-regulated")]
     name[[i]] <- heatmap_dt$gene_name[rownames(heatmap_dt) %in% deregs[[i]]]
     
@@ -379,22 +353,66 @@ for (i in levels(Tests$Test)) {
       name[[i]][prot] <- ifelse(is.na(name[[i]][prot]),
                                 deregs[[i]][prot],
                                 name[[i]][prot])
+      
     }
     
-    samples[[i]] <- sort(paste0(strsplit(i, split = " vs ")[[1]], rep(1:3, 2)))
-    samples[[i]] <- gsub("Control", "CTRL", samples[[i]])
+    samps <- paste0(c("HIV1_", "CTRL_", "IFN_"), 
+                    c(rep(1, 3), rep(2, 3), rep(3, 3))) %>% sort()
+    samples[[i]] <- samps[1:3]
+    if (grepl("HIV", i)) {
+      samples[[i]] <- c(samples[[i]], samps[4:6])
+    } else {
+      samples[[i]] <- c(samples[[i]], samps[7:9])
+    }
+      
     data[[i]] <- heatmap_dt[deregs[[i]], samples[[i]]]
-    dereg_heatmaps[[i]] <- Heatmap(data[[i]], row_names_gp = gpar(fontsize = 6),
-                                   column_title = i, 
+    dereg_heatmaps[[i]] <- Heatmap(data[[i]], row_names_gp = gpar(fontsize = 5),
+                                   column_title = gsub("\n", " ", i), 
                                    column_names_gp = gpar(fontsize = 9),
-                                   column_dend_height = unit(2.5, "mm"),
+                                   cluster_columns = F,
                                    column_names_side = "top", row_names_side = "left",
                                    row_labels = name[[i]], name = "log2(Intensity)"
                                    )
   }
 }
+```
 
+
+```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
 dereg_heatmaps[[1]]
+```
+<br>
+<br>
+
+```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
 dereg_heatmaps[[2]]
+```
+
+```{r echo=FALSE, fig.height=4, fig.width=4, message=FALSE, warning=FALSE, paged.print=FALSE}
+HIV_prots <- data.frame(
+  "Protein_region" = c(rep("P17", 6), rep("P24 N terminus", 4), "P24 (N terminus, Linker, C terminus)", rep("P24  C terminus", 2), "P6"),
+  "Peptides" = c("(R)ASVLSGGELDK(W)", "(R)ASVLSGGELDKWEK(I)", "(R)FAVNPGLLETSEGcR(Q)", "(R)QILGQLQPSLQTGSEELR(S)", "(R)SLYNTIAVLYcVHQR(I)", "(K)EALDKIEEEQNK(S)", "(K)ETINEEAAEWDR(L)", "(R)LHPVHAGPIAPGQMR(E)", "(R)GSDIAGTTSTLQEQIGWMTHNPPIPVGEIYK(R)", "(R)WIILGLNK(I)", "(R)MYSPTSILDIR(Q)", "(K)NWMTETLLVQNANPDcK(T)", "(K)ALGPGATLEEMMTAcQGVGGPGHK(A)", "(R)QEPIDKELYPLASLR(S)"),
+  "HIV1_1" = c(0, 2, 1, 1, 1, 2, 1, 0, 0, 1, 0, 0, 0, 0), 
+  "HIV1_2" = c(0, 2, 1, 1, 1, 1, 2, 0, 0, 1, 1, 0, 0, 0),
+  "HIV1_3" = c(0, 1, 1, 1, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0),
+  "HIV1_IFNb_1" = c(1, 2, 0, 1, 1, 2, 1, 3, 1, 1, 2, 1, 1, 1),
+  "HIV1_IFNb_2" = c(0, 2, 1, 1, 0, 2, 0, 4, 1, 1, 1, 0, 1, 0),
+  "HIV1_IFNb_3" = c(0, 2, 1, 1, 1, 2, 1, 3, 1, 0, 1, 0, 1, 0), stringsAsFactors = F)
+
+HIV_prots$HIV1 <- rowSums(HIV_prots[, 3:5])
+HIV_prots$HIV1_IFNb  <- rowSums(HIV_prots[, 6:8])
+
+ggplot(data = data.frame(variable = c("HIV1", "HIV1 + IFNb"), value = apply(HIV_prots[, c("HIV1", "HIV1_IFNb")], 2, sum)), 
+       aes(variable, value, fill = variable)) + 
+  geom_text(aes(variable, value + 2, label = value)) + 
+  geom_col() + labs(x = "", y = "Total HIV-1 unique spectra (3x exp.)", title = "Abundance of HIV-1 proteins\nin nuclear envolope fractions") + 
+  scale_fill_manual(values = c("#106909", "#8f2424")) + 
+  scale_y_continuous(limits = c(0, 50)) + theme_bw() + 
+  theme(legend.position = "None", 
+        aspect.ratio = 1.5, 
+        axis.title = element_text(size = 12, color = "black"), 
+        axis.text = element_text(size = 12, color = "black"),
+        plot.title = element_text(hjust = 0.5))
+
 ```
 

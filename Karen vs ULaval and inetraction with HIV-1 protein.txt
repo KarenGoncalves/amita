@@ -1,0 +1,100 @@
+	Karen Accession no	U laval Accession	Protein ID	Discription	Vpu	Vif	Vpr	Nef 	Rev	Tat	gp120	gp41	RT	Rnase H	IN	PR	MA	CA	SP1	NC	SP2	P6	pr55	Gag-Pol	Retropepsin
+	Q6UWU4	Q6UWU4										x													
+no	Q9UMY1	Q9UMY1																							
+no	Q12962	Q12962																							
+no	Q9Y3D5	Q9Y3D5																							
+no	Q8IY26	Q8IY26																							
+no	Q9NZV5	Q9NZV5																							
+no	Q92522	Q92522																							
+	Q86YP4	Q86YP4								x															
+no	P07305	P07305																							
+	P16403	P16403								x													x		
+no	P35030	P35030																							
+	P61769	P61769			x			x		x															
+	Q9Y4K3	Q9Y4K3					x	x																	
+	H0YIN8	H0YIN8					x																		
+no	Q9P0T7	Q9P0T7																							
+no	Q86V48	Q86V48																							
+no	Q9UNN5	Q9UNN5																							
+	K7EK77	K7EK77					x	x		x	x												x	x	x
+	Q99848	Q99848																							x
+	P16401	P16401								x													x		
+	J3KMZ9	J3KMZ9				x		x			x														
+	E7EQ64	E7EQ64									x														
+	P12270	P12270								x													x		
+no	P13645-CONT	P13645-CONT																							
+	Q9Y5Z4	Q9Y5Z4								x															
+	Q8IYB3	Q8IYB3																							x
+	E9PK91	E9PK91								x															
+no	P04264-CONT	P04264-CONT																							
+	Q9Y2W1	Q9Y2W1													x								x		x
+no	Q7L4I2	Q7L4I2																							
+	P55081	P55081							x																
+	P49716	P49716					x			x	x														
+no	P35527-CONT	P35527-CONT																							
+no	Q8IWI9	Q8IWI9																							
+no	P30414	P30414																							
+no	Q8WXI9	Q8WXI9																							
+	O00767	O00767															x								
+no	Q9NSI2	Q9NSI2																							
+no	Q8N511	Q8N511																							
+	Q9UKV3	Q9UKV3							x																
+no	E7ERS3	E7ERS3																							
+no	Q5TEC6	Q5TEC6																							
+no	Q9Y3A2	Q9Y3A2																							
+no	Q9C0B5	Q9C0B5																							
+no	Q9BUH6	Q9BUH6																							
+	P06748	P06748					x	x	x	x													x	x	
+no	P49750	P49750																							
+no	P62341	P62341																							
+no	Q9BVJ6	Q9BVJ6																							
+no	Q9H0X4	Q9H0X4																							
+	Q9P0M6	Q9P0M6								x															
+no	O75940	O75940																							
+	Q71UI9	Q71UI9								x															
+no	Q8IWZ8	Q8IWZ8																							
+	P62805	P62805							x	x															
+no	Q8NCN2	Q8NCN2																							
+no	P06702	P06702																							
+no	Q9UBW7	Q9UBW7																							
+	A6NNK5	A6NNK5					x				x														
+no	Q96GC6	Q96GC6																							
+	Q14137	Q14137								x															
+no	P31260	P31260																							
+	Q9GZL7	Q9GZL7									x														
+	Q9BX59	Q9BX59									x														
+	I3L3Y9	I3L3Y9				x																			
+	Q9NRR5	Q9NRR5																							
+	O00291	O00291						x																	
+	P10586	P10586									x														
+no	Q8TD55	Q8TD55																							
+no	Q15388	Q15388																							
+no	O76062	O76062																							
+	P08670	P08670				x	x	x			x						x						x	x	x
+no	B5MCF9	B5MCF9																							
+no	P62140	P62140																							
+	J3KQN4	J3KQN4																					x		
+no	Q9UPW0	Q9UPW0																							
+no	A0A0U1RRL7	A0A0U1RRL7																							
+no	Q8NBL1	Q8NBL1																							
+no	Q9NP66	Q9NP66																							
+no	Q7L7X3	Q7L7X3																							
+no	Q92917	Q92917																							
+no	Q6IN84	Q6IN84																							
+no	A0A0C4DGT8	A0A0C4DGT8																							
+no	Q99735	Q99735																							
+no	G3V5V3	G3V5V3																							
+	Q9UH65	Q9UH65																							x
+no	Q9BUL8	Q9BUL8																							
+	P27540	P27540															x								
+	Q8NCA5	Q8NCA5								x															
+no	P33947	P33947																							
+	Q15819	Q15819																x							
+	P16949	P16949													x										
+no	O95070	O95070																							
+no	Q96G25	Q96G25																							
+no	Q6RW13	Q6RW13																							
+	P28070	P28070				x		x		x					x										
+	F5H8H2	F5H8H2				x																			
+no	Q96EX1	Q96EX1																							
+no	Q9H2V7	Q9H2V7																							

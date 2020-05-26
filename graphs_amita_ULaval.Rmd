@@ -8,11 +8,18 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, 
                       root.dir = "E:/amita")
-library(magrittr)
-library(reshape2)
-library(tidyverse)
-library(ggforce)
+repos <- c("https://cran.rstudio.com/", "https://bioconductor.org/packages/3.11/bioc", 
+					 "https://bioconductor.org/packages/3.11/data/annotation",
+					 "https://bioconductor.org/packages/3.11/data/experiment")
 
+for (i in c("magrittr", "reshape2", "tidyverse", "ggforce",
+						"ensembldb", "ggdendro", "EnsDb.Hsapiens.v86", 
+						"heatmap3", "lattice", "reshape2", "svglite")) {
+	if (!i %in% rownames(installed.packages())) {
+		install.packages(i, repos = repos)
+	}
+	library(i, character.only = T)
+}
 
 ```
 ```{r echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -72,12 +79,18 @@ for (i in levels(for_plots$Test)) {
   dap[[i]] <- org.adj.pVal[ abs(org.adj.pVal[, zsc]) > 1.96 & org.adj.pVal[, statv] == "VARIANT", "Accession" ]
   
   Total <- length(dap[[i]])
-  Up_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, a] < -1.96, a])
-  Down_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% dap[[i]] & zscore_ratio[, a]  > 1.96, a])
+  
+  Up_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% 
+                                         dap[[i]] & zscore_ratio[, a] < -1.96, a])
+  Down_regulated <- length(zscore_ratio[ zscore_ratio$Accession %in% 
+                                           dap[[i]] & zscore_ratio[, a]  > 1.96, a])
+  
   summary_plot <- rbind(summary_plot, c(Total, Up_regulated, Down_regulated)) %>% as.data.frame()
   colnames(summary_plot) <- c("Total", "Up-regulated", "Down-regulated")
-  write.table(org.adj.pVal[ abs(org.adj.pVal[, zsc]) > 1.96 & org.adj.pVal[, statv] == "VARIANT", 
-                            c("Accession", zsc, qv, statv)], 
+  
+  write.table(org.adj.pVal[abs(org.adj.pVal[, zsc]) > 1.96 & 
+                             org.adj.pVal[, statv] == "VARIANT", 
+                           c("Accession", zsc, qv, statv)], 
               paste0("Deregulated_proteins_", gsub("[\n ]", "_", i), ".txt"), 
               sep = "\t", quote = F, eol = "\n", row.names = F, col.names = T)
 
@@ -165,8 +178,11 @@ ggplot(joined_plots, aes(variable, value, fill = Test)) +
   theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
         legend.position = "none") + 
   facet_wrap(~Normalization, nrow = 1)
-ggsave("Comparison_before_after_norm_horizontal.tiff",device = "tiff", width = 10, height = 6, units = "in", dpi = 300)
-ggsave("Comparison_before_after_norm_horizontal.eps",device = "eps", width = 10, height = 6, units = "in", dpi = 300)
+ggsave("Comparison_before_after_norm_horizontal.tiff",
+       device = "tiff", width = 10, height = 6, units = "in", dpi = 300)
+
+ggsave("Comparison_before_after_norm_horizontal.eps",
+       device = "eps", width = 10, height = 6, units = "in", dpi = 300)
 ```
 
 ```{r echo=FALSE, fig.height=10, fig.width=6, message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -178,8 +194,11 @@ ggplot(joined_plots, aes(variable, value, fill = Test)) +
   theme(axis.text.x = element_text(angle = 90, color = "black", hjust = 1, vjust = 0.5),
         legend.position = "none") + 
   facet_wrap(~Normalization, nrow = 2)
-ggsave("Comparison_before_after_norm_vertical.tiff",device = "tiff", width = 6, height = 10, units = "in", dpi = 300)
-ggsave("Comparison_before_after_norm_vertical.eps",device = "eps", width = 6, height = 10, units = "in", dpi = 300)
+
+ggsave("Comparison_before_after_norm_vertical.tiff",
+       device = "tiff", width = 6, height = 10, units = "in", dpi = 300)
+ggsave("Comparison_before_after_norm_vertical.eps",
+       device = "eps", width = 6, height = 10, units = "in", dpi = 300)
 
 ```
 
@@ -202,8 +221,8 @@ ggplot(pca_data, aes(PC1, PC2, color = Sample, label = Replicate)) +
   theme_bw() + theme(legend.position = "none",
                      axis.text = element_text(color = "black"),
                      aspect.ratio = 0.5)
-ggsave("PCA.tiff",device = "tiff", width = 7, height = 4, units = "in", dpi = 300)
-ggsave("PCA.eps",device = "eps", width = 7, height = 4, units = "in", dpi = 300)
+ggsave("PCA.tiff", device = "tiff", width = 7, height = 4, units = "in", dpi = 300)
+ggsave("PCA.eps", device = "eps", width = 7, height = 4, units = "in", dpi = 300)
 
 ```
 
@@ -217,8 +236,9 @@ ggplot(melt_quants, aes(Test, value, fill = variable, color = variable)) +
   labs(x = "Test", y = "Number of proteins") +
   theme_bw() + theme(axis.text = element_text(color = "black"),
                      legend.position = "bottom",)
-ggsave("Quant_prot.tiff",device = "tiff", width = 6, height = 6, units = "in", dpi = 300)
-ggsave("Quant_prot.eps",device = "eps", width = 6, height = 6, units = "in", dpi = 300)
+
+ggsave("Quant_prot.tiff", device = "tiff", width = 6, height = 6, units = "in", dpi = 300)
+ggsave("Quant_prot.eps", device = "eps", width = 6, height = 6, units = "in", dpi = 300)
 ```
 
 # 5) Number of variant proteins for each comparison
@@ -293,8 +313,6 @@ for (prot in 1:nrow(Tests)) {
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-library(ensembldb)
-library(EnsDb.Hsapiens.v86)
 edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
 
 txs <- transcripts(edb, columns = c("gene_name", "uniprot_id"))@elementMetadata@listData %>%
@@ -318,41 +336,42 @@ colnames(gene_names) <- colnames(txs)
 vplots_data <- list()
 
 for (i in unique(Tests$Test)) {
+  a <- gsub("\n", " ", i)
   if (i == "HIV1\nvs Control") {
     data <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name) 
     
-    vplots_data[[i]] <- 
+    vplots_data[[a]] <- 
       ggplot(data, aes(-1 * Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
       geom_point(size = 1) + 
       geom_text(data =  dplyr::filter(data, Status != FALSE), 
-                nudge_y = c(0.3, -0.3), size = 2, check_overlap = T) +
+                nudge_y = c(0.3, -0.3), size = 2) +
       geom_point(aes(x = -1 * (data$Zscore_ratio[data$Accession == "P12270"]), 
                      y = -log10(data$qValue[data$Accession == "P12270"])),
                  size = 3, color = "black") +
       scale_color_manual(values = c("blue", "grey", "red")) + 
       labs(x = expression(log[2]("Z-Score Ratio")), 
            y = expression(-log[10](qValue)), 
-           title = gsub("\n", " ", i)) + 
+           title = a) + 
       theme_bw() + theme(legend.position = "none") 
   } else {
     data <- dplyr::filter(Tests, Test == i) %>% cbind(gene_name = gene_names$gene_name) 
     
-    vplots_data[[i]] <- 
+    vplots_data[[a]] <- 
       ggplot(data, aes(-1 * Zscore_ratio, -log10(qValue), color = Status, label = gene_name)) + 
       geom_point(size = 1) + 
       geom_text(data =  dplyr::filter(data, Status != FALSE), 
-                nudge_y = c(0.3, -0.3), size = 2.5, check_overlap = T) +
+                nudge_y = c(0.3, -0.3), size = 2.5) +
       scale_color_manual(values = c("blue", "grey", "red")) + 
       labs(x = expression(log[2]("Z-Score Ratio")), 
            y = expression(-log[10](qValue)), 
-           title = gsub("\n", " ", i)) + 
+           title = a) + 
       theme_bw() + theme(legend.position = "none") 
   }
   
-  print( vplots_data[[i]])
-  ggsave(plot = vplots_data[[i]], paste0("Volcano_plot", gsub("\n", " ", i), ".tiff"), 
+  print( vplots_data[[a]])
+  ggsave(plot = vplots_data[[a]], paste0("Volcano_plot", a, ".tiff"), 
          device = "tiff", dpi = 300)
-  ggsave(plot = vplots_data[[i]], paste0("Volcano_plot", gsub("\n", " ", i), ".eps"), 
+  ggsave(plot = vplots_data[[a]], paste0("Volcano_plot", a, ".eps"), 
          device = "eps", dpi = 300)
   dev.off()
 
@@ -364,11 +383,13 @@ for (i in unique(Tests$Test)) {
 ## Single heatmap with all proteins (deregulated or not)
 
 ```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
-(heat <- Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
+heat <- Heatmap(heatmap_data[, -13], name = "Zscore ratio", column_names_side = "top",
         cluster_columns = F, show_row_dend = F, cluster_rows = T,
         show_column_dend = F, column_dend_side = "top",
         row_labels = rep("", nrow(heatmap_data)),
-        row_title = "Dendrogram calculated with Zscore"))
+        row_title = "Dendrogram calculated with Zscore")
+
+draw(heat)
 postscript(file = "Heatmap_all_prots.eps")
 heat
 dev.off()
@@ -383,12 +404,14 @@ dev.off()
 
 ```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
 deregulated_prots <- union(dap[[1]], union(dap[[2]], union(dap[[3]], union(dap[[4]], dap[[5]]))))
-(heat <- Heatmap(heatmap_data[heatmap_data$Accession %in% deregulated_prots, -13], 
+heat <- Heatmap(heatmap_data[heatmap_data$Accession %in% deregulated_prots, -13], 
                 name = "Zscore ratio", column_names_side = "top",
                 cluster_columns = F, show_row_dend = F, cluster_rows = T,
                 show_column_dend = F, column_dend_side = "top",
                 row_labels = rep("", length(deregulated_prots)),
-                row_title = "Dendrogram calculated with Zscore"))
+                row_title = "Dendrogram calculated with Zscore")
+draw(heat)
+
 tiff(filename = "Heatmap_deregulated_prots.tiff", width = 7, height = 12, units = "in", res = 300)
 heat
 dev.off()
@@ -441,8 +464,11 @@ for (i in levels(Tests$Test)) {
 ## Heatmap of deregulated proteins in test *IFN vs Control*
 
 ```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+dereg_heatmaps[[1]]
+
 tiff(filename = "Heatmap_deregulated_IFNvsControl.tiff", width = 7, height = 12, units = "in", res = 300)
-(dereg_heatmaps[[1]])
+dereg_heatmaps[[1]]
 dev.off()
 
 postscript(file = "Heatmap_deregulated_IFNvsControl.eps")
@@ -454,8 +480,9 @@ dev.off()
 ## Heatmap of deregulated proteins in test *HIV-1 vs Control*
 
 ```{r echo=FALSE, fig.height=12, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+dereg_heatmaps[[2]]
 tiff(filename = "Heatmap_deregulated_HIV-1vsControl.tiff", width = 7, height = 12, units = "in", res = 300)
-(dereg_heatmaps[[2]])
+dereg_heatmaps[[2]]
 dev.off()
 postscript(file = "Heatmap_deregulated_HIV-1vsControl.eps")
 dereg_heatmaps[[2]]
@@ -475,6 +502,27 @@ HIV_prots <- data.frame(
   "HIV1_IFNb_2" = c(0, 2, 1, 1, 0, 2, 0, 4, 1, 1, 1, 0, 1, 0),
   "HIV1_IFNb_3" = c(0, 2, 1, 1, 1, 2, 1, 3, 1, 0, 1, 0, 1, 0), stringsAsFactors = F)
 
+t_test <- list()
+for (i in unique(HIV_prots$Protein_region)) {
+  t_test[[i]] <- data.frame(HIV = c(HIV_prots[HIV_prots$Protein_region == i,3], 
+                                    HIV_prots[HIV_prots$Protein_region == i,4],
+                                    HIV_prots[HIV_prots$Protein_region == i,5]), 
+                            HIV_IFN = c(HIV_prots[HIV_prots$Protein_region == i,6],
+                                        HIV_prots[HIV_prots$Protein_region == i,7], 
+                                        HIV_prots[HIV_prots$Protein_region == i,8])) %>% t.test()
+}
+
+t_test_all <- list()
+for (i in colnames(HIV_prots[, 3:8])) {
+  if (grepl("IFNb", i)) {
+    t_test_all[["HIV1_IFNb"]] <- c(t_test_all[["HIV1_IFNb"]], sum(HIV_prots[, i]))
+  } else {
+    t_test_all[["HIV1"]] <- c(t_test_all[["HIV1"]], sum(HIV_prots[, i]))
+  }
+}
+
+t_test_all <- data.frame(HIV_IFNb =  t_test_all[["HIV1_IFNb"]], HIV1 = t_test_all[["HIV1"]])
+t.test(t_test_all)
 HIV_prots$HIV1 <- rowSums(HIV_prots[, 3:5])
 HIV_prots$HIV1_IFNb  <- rowSums(HIV_prots[, 6:8])
 
@@ -496,7 +544,8 @@ ggsave(paste0("HIV_pep_membrane", ".eps"), device = "eps", width = 4, height = 4
 ```
 
 ```{r}
-interaction_hiv <- read.delim("Karen vs ULaval and inetraction with HIV-1 protein.txt", header = T, row.names = 2, stringsAsFactors = F)
+interaction_hiv <- read.delim("Karen vs ULaval and inetraction with HIV-1 protein.txt", 
+                              header = T, row.names = 2, stringsAsFactors = F)
 interactions <- interaction_hiv[interaction_hiv$X == "", -c(1, 3, 4)]
 
 for (j in 2:ncol(interactions)) {
@@ -509,14 +558,30 @@ for (j in 2:ncol(interactions)) {
 
 melt_interactions <- melt(interactions, id = "U.laval.Accession")
 melt_interactions <- melt_interactions[melt_interactions$value == 1,-3]
-nodes <- data.frame(Protein_ID = c(levels(melt_interactions$variable), unique(melt_interactions$U.laval.Accession)),
-                    Origin = c(rep("HIV-1", levels(melt_interactions$variable) %>% length),
-                               rep("Human", unique(melt_interactions$U.laval.Accession) %>% length)),
-                    Protein_name = c(levels(melt_interactions$variable), 
-                                     gene_names[gene_names$uniprot_id %in% melt_interactions$U.laval.Accession, 2]))
+melt_interactions$variable <- as.character(melt_interactions$variable) %>%
+  gsub(pattern = "Retropepsin", replacement = "Protease")
 names(melt_interactions) <- c("Human", "HIV-1")
 
-write.table(nodes, "nodes_interactions.txt", quote = F, sep = "\t", eol = "\n", row.names = F, col.names = T)
-write.table(melt_interactions, "edges_interactions.txt", quote = F, sep = "\t", eol = "\n", row.names = F, col.names = T)
+nodes <- data.frame(Protein_ID = c(unique(melt_interactions$`HIV-1`), 
+                                   unique(melt_interactions$Human)),
+                    Origin = c(rep("HIV-1", unique(melt_interactions$`HIV-1`) %>% length),
+                               rep("Human", unique(melt_interactions$Human) %>% length)),
+                    Protein_name = c(unique(melt_interactions$`HIV-1`), 
+                                     gene_names[gene_names$uniprot_id %in% melt_interactions$Human, 2]))
+hiv <- c()
+for (i in 1:nrow(nodes)) {
+  hiv <- c(hiv, ifelse(nodes$Protein_ID[i] %in% 
+                         vplots_data$`HIV1 vs Control`$data$Accession, 
+                       vplots_data$`HIV1 vs Control`$data$Zscore_ratio[
+                         vplots_data$`HIV1 vs Control`$data$Accession == nodes$Protein_ID[i]], 0))
+}
+
+nodes$HIV1.vs.Control <- ifelse(hiv == 0, 0, ifelse(hiv > 0, "Up-regulated", "Down-regulated"))
+nodes$width <- str_count(nodes$Protein_name, "")*8 + 20
+
+write.table(x = nodes, file = "nodes_interactions.txt", 
+            quote = F, sep = "\t", eol = "\n", row.names = F, col.names = T)
+write.table(x = melt_interactions, file = "edges_interactions.txt", 
+            quote = F, sep = "\t", eol = "\n", row.names = F, col.names = T)
 ```
 

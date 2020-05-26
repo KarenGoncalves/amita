@@ -68,9 +68,9 @@ J3KQN4	pr55
 K7EK77	Gag.Pol
 P06748	Gag.Pol
 P08670	Gag.Pol
-K7EK77	Retropepsin
-Q99848	Retropepsin
-Q8IYB3	Retropepsin
-Q9Y2W1	Retropepsin
-P08670	Retropepsin
-Q9UH65	Retropepsin
+K7EK77	Protease
+Q99848	Protease
+Q8IYB3	Protease
+Q9Y2W1	Protease
+P08670	Protease
+Q9UH65	Protease

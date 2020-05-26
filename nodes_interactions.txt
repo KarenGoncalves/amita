@@ -1,62 +1,55 @@
-Protein_ID	Origin	Protein_name
-Vpu	HIV-1	Vpu
-Vif	HIV-1	Vif
-Vpr	HIV-1	Vpr
-Nef	HIV-1	Nef
-Rev	HIV-1	Rev
-Tat	HIV-1	Tat
-gp120	HIV-1	gp120
-gp41	HIV-1	gp41
-RT	HIV-1	RT
-Rnase.H	HIV-1	Rnase.H
-IN	HIV-1	IN
-PR	HIV-1	PR
-MA	HIV-1	MA
-CA	HIV-1	CA
-SP1	HIV-1	SP1
-NC	HIV-1	NC
-SP2	HIV-1	SP2
-P6	HIV-1	P6
-pr55	HIV-1	pr55
-Gag.Pol	HIV-1	Gag.Pol
-Retropepsin	HIV-1	Retropepsin
-P61769	Human	C6orf89
-J3KMZ9	Human	GATAD2A
-I3L3Y9	Human	HIST1H1C
-P08670	Human	B2M
-P28070	Human	TRAF6
-F5H8H2	Human	ANKRD13A
-Q9Y4K3	Human	ATP5A1
-H0YIN8	Human	EBNA1BP2
-K7EK77	Human	HIST1H1B
-P49716	Human	LDLR
-P06748	Human	PRSS1
-A6NNK5	Human	TPR
-O00291	Human	HEBP2
-P55081	Human	SRRM1
-Q9UKV3	Human	BCLAF1
-P62805	Human	THRAP3
-Q86YP4	Human	MFAP1
-P16403	Human	CEBPD
-P16401	Human	SCD
-P12270	Human	ACIN1
-Q9Y5Z4	Human	NPM1
-E9PK91	Human	H2AFY2
-Q9P0M6	Human	H2AFV
-Q71UI9	Human	HIST2H4A
-Q14137	Human	TP53BP1
-Q8NCA5	Human	BOP1
-E7EQ64	Human	WDR12
-Q9GZL7	Human	TAPBPL
-Q9BX59	Human	GPS2
-P10586	Human	HIP1
-Q6UWU4	Human	PTPRF
-Q9Y2W1	Human	VIM
-P16949	Human	RPL36A
-O00767	Human	SWAP70
-P27540	Human	ARNT
-Q15819	Human	FAM98A
-J3KQN4	Human	UBE2V2
-Q99848	Human	STMN1
-Q8IYB3	Human	PSMB4
-Q9UH65	Human	MVK
+Protein_ID	Origin	Protein_name	HIV1.vs.Control	width
+Vpu	HIV-1	Vpu	0	44
+Vif	HIV-1	Vif	0	44
+Vpr	HIV-1	Vpr	0	44
+Nef	HIV-1	Nef	0	44
+Rev	HIV-1	Rev	0	44
+Tat	HIV-1	Tat	0	44
+gp120	HIV-1	gp120	0	60
+gp41	HIV-1	gp41	0	52
+IN	HIV-1	IN	0	36
+MA	HIV-1	MA	0	36
+CA	HIV-1	CA	0	36
+pr55	HIV-1	pr55	0	52
+Gag.Pol	HIV-1	Gag.Pol	0	76
+Protease	HIV-1	Protease	0	84
+P61769	Human	C6orf89	Up-regulated	76
+J3KMZ9	Human	GATAD2A	Up-regulated	76
+I3L3Y9	Human	HIST1H1C	Down-regulated	84
+P08670	Human	B2M	Up-regulated	44
+P28070	Human	TRAF6	Down-regulated	60
+F5H8H2	Human	ANKRD13A	Up-regulated	84
+Q9Y4K3	Human	ATP5A1	Down-regulated	68
+H0YIN8	Human	EBNA1BP2	Down-regulated	84
+K7EK77	Human	HIST1H1B	Up-regulated	84
+P49716	Human	LDLR	Down-regulated	52
+P06748	Human	PRSS1	Down-regulated	60
+A6NNK5	Human	TPR	Down-regulated	44
+O00291	Human	HEBP2	Up-regulated	60
+P55081	Human	SRRM1	Down-regulated	60
+Q9UKV3	Human	BCLAF1	Down-regulated	68
+P62805	Human	THRAP3	Down-regulated	68
+Q86YP4	Human	MFAP1	Down-regulated	60
+P16403	Human	CEBPD	Down-regulated	60
+P16401	Human	SCD	Down-regulated	44
+P12270	Human	ACIN1	Down-regulated	60
+Q9Y5Z4	Human	NPM1	Up-regulated	52
+E9PK91	Human	H2AFY2	Down-regulated	68
+Q9P0M6	Human	H2AFV	Down-regulated	60
+Q71UI9	Human	HIST2H4A	Down-regulated	84
+Q14137	Human	TP53BP1	Up-regulated	76
+Q8NCA5	Human	BOP1	Down-regulated	52
+E7EQ64	Human	WDR12	Down-regulated	60
+Q9GZL7	Human	TAPBPL	Up-regulated	68
+Q9BX59	Human	GPS2	Down-regulated	52
+P10586	Human	HIP1	Up-regulated	52
+Q6UWU4	Human	PTPRF	Up-regulated	60
+Q9Y2W1	Human	VIM	Down-regulated	44
+P16949	Human	RPL36A	Down-regulated	68
+O00767	Human	SWAP70	Down-regulated	68
+P27540	Human	ARNT	Down-regulated	52
+Q15819	Human	FAM98A	Down-regulated	68
+J3KQN4	Human	UBE2V2	Up-regulated	68
+Q99848	Human	STMN1	Down-regulated	60
+Q8IYB3	Human	PSMB4	Down-regulated	60
+Q9UH65	Human	MVK	Down-regulated	44
